@@ -1,7 +1,7 @@
 {
   "name": "mural-mcp",
   "version": "2.0.0",
-  "description": "MCP server for the Mural public API (read-only)",
+  "description": "Read-only Model Context Protocol server for the Mural public API — read boards, sticky notes, and workshop content from Claude.",
   "main": "build/index.js",
   "type": "module",
   "bin": {
@@ -12,11 +12,23 @@
     "auth": "node build/auth-cli.js",
     "start": "node build/index.js",
     "dev": "tsc --watch",
-    "legacy": "node index.js"
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build"
   },
-  "keywords": ["mcp", "mural", "model-context-protocol"],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "mcp",
+    "mural",
+    "model-context-protocol",
+    "claude",
+    "claude-code",
+    "miro-alternative",
+    "whiteboard",
+    "oauth",
+    "read-only",
+    "ai-agent"
+  ],
+  "author": "Steph Schofield",
+  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "zod": "^3.25.76"
@@ -27,5 +39,20 @@
   },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stephschofield/mural-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stephschofield/mural-mcp/issues"
+  },
+  "homepage": "https://github.com/stephschofield/mural-mcp#readme",
+  "files": [
+    "build/",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    ".env.example"
+  ]
 }

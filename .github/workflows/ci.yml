@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & typecheck (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # --ignore-scripts: the `prepare` script runs the build, which we invoke
+      # explicitly below. Skipping it here keeps install and build failures
+      # distinguishable in the log.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify the server boots and speaks MCP
+        run: |
+          # An MCP server must respond to initialize on stdio. No Mural
+          # credentials are present, so this also proves the server starts
+          # without them -- the documented cached-token-only boot path.
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | timeout 20s node build/index.js > out.json 2> err.log || true
+          echo "--- stderr ---"; cat err.log
+          echo "--- stdout ---"; cat out.json
+          grep -q '"serverInfo"' out.json \
+            || { echo "::error::Server did not return a valid initialize response"; exit 1; }
+          grep -q 'mural-mcp' out.json \
+            || { echo "::error::initialize response did not identify as mural-mcp"; exit 1; }
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks needs full history
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Block credential files from ever being tracked
+        run: |
+          # Belt-and-braces alongside .gitignore: .gitignore does not protect a
+          # file that someone renames or force-adds.
+          if git ls-files --error-unmatch .env tokens.json 2>/dev/null; then
+            echo "::error::A credential file is tracked in git."
+            exit 1
+          fi
+
+          # Any tracked file assigning a long literal to a secret-shaped name.
+          if git ls-files -z | xargs -0 grep -nEI \
+            '(client_secret|clientSecret|refresh_token|access_token|api[_-]?key)[^a-zA-Z0-9]{0,12}[=:][[:space:]]*["\047][A-Za-z0-9_.-]{16,}["\047]' \
+            -- ':!*.example' ':!.github/workflows/*' 2>/dev/null; then
+            echo "::error::A hardcoded secret literal was found in a tracked file."
+            exit 1
+          fi
+
+          echo "No tracked credential files or hardcoded secret literals found."

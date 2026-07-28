@@ -20,6 +20,7 @@ export interface RateLimitStatus {
   resetAt?: string;
   appLimit?: number;
   appRemaining?: number;
+  appResetAt?: string;
 }
 
 export class MuralApiError extends Error {
@@ -56,13 +57,18 @@ export class MuralClient {
       const v = headers.get(h);
       return v === null ? undefined : Number(v);
     };
-    const reset = num("X-RateLimit-Reset");
+    // Mural documents two parallel limits: 25 req/user/sec and 10,000 req/app/min.
+    // Each reports its own reset as epoch seconds.
+    const toIso = (epochSeconds?: number): string | undefined =>
+      epochSeconds ? new Date(epochSeconds * 1000).toISOString() : undefined;
+
     this.rateLimit = {
       limit: num("X-RateLimit-Limit"),
       remaining: num("X-RateLimit-Remaining"),
-      resetAt: reset ? new Date(reset * 1000).toISOString() : undefined,
+      resetAt: toIso(num("X-RateLimit-Reset")),
       appLimit: num("X-RateLimit-App-Limit"),
       appRemaining: num("X-RateLimit-App-Remaining"),
+      appResetAt: toIso(num("X-RateLimit-App-Reset")),
     };
   }
 

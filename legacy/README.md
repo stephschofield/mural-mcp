@@ -1,4 +1,20 @@
-# Mural MCP Server
+# Mural MCP Server — legacy prototype (v1, March 2026)
+
+> **Archived. Do not use this for new installations.**
+>
+> This is the original single-file prototype, kept for reference and for the
+> field-probing behavior it discovered against the live API. It requires you to
+> obtain a Bearer token by hand (via Postman or the API test UI) and loses it on
+> every restart.
+>
+> **Use the v2 server instead** — it does real OAuth login, caches tokens on
+> disk, refreshes them automatically, paginates, and rate-limits.
+> See the [main README](../README.md) and
+> [installation guide](../docs/INSTALLATION.md).
+>
+> **This code is not runnable as shipped.** It depends on `axios`, which is
+> deliberately not a dependency of v2 (which uses the built-in `fetch`). To run
+> it for comparison: `npm install axios && node legacy/index.js`.
 
 Pull text content from your Mural boards directly into Claude.
 
