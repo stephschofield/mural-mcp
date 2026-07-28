@@ -36,4 +36,11 @@ Thumbs.db
 
 # ── Local agent / tooling state ──────────────────────────────────────────────
 .claude/worktrees/
-showoff-output/
+.agents/
+skills-lock.json
+
+# ShowOff: ignore the heavy intermediates, but allow the finished video/poster
+# to be committed so the README demo works on a fresh clone.
+showoff-output/*/composition/
+showoff-output/*/evidence-dossier.md
+showoff-output/*/showoff-plan.md

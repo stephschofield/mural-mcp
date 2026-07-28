@@ -58,6 +58,33 @@ Claude: (list_workspaces → list_rooms → list_murals → get_mural_text)
 
 Recipes for each in the **[Usage Guide](docs/USAGE.md)**.
 
+## Demo
+
+<!-- SHOWOFF:BEGIN -->
+
+<div align="center">
+
+*A 30-second walkthrough is being produced with [ShowOff](https://github.com/All-The-Vibes/ShowOff).
+Run `/showoff` in this repository to generate `showoff.mp4` and `showoff.jpg`,
+then replace this block with the poster-linked embed below.*
+
+</div>
+
+<details>
+<summary>Embed snippet to paste once the video is rendered</summary>
+
+```markdown
+[![Mural MCP Server demo](showoff-output/<timestamp>/showoff.jpg)](showoff-output/<timestamp>/showoff.mp4)
+```
+
+GitHub renders a linked poster image rather than an inline player for repository
+files. For an inline player, drag `showoff.mp4` into any issue or PR comment,
+then use the `user-attachments` URL GitHub returns.
+
+</details>
+
+<!-- SHOWOFF:END -->
+
 ## Read-only by design
 
 This server **cannot create, modify, or delete anything** in Mural. That is
