@@ -43,19 +43,24 @@ function defaultTokenPath(): string {
 
 /**
  * Load config from the environment.
- * @param requireSecret false when only reading cached tokens is needed.
+ *
+ * @param requireCredentials true for the OAuth CLI, which cannot work without
+ *   client id + secret. The MCP server passes false: cached tokens are enough
+ *   to serve reads, and credentials are only needed at refresh time. Failing at
+ *   boot instead would take the whole server down when the host environment
+ *   lacks the vars, even though most calls would have succeeded.
  */
-export function loadConfig(requireSecret = true): MuralConfig {
+export function loadConfig(requireCredentials = true): MuralConfig {
   const clientId = process.env.MURAL_CLIENT_ID;
   const clientSecret = process.env.MURAL_CLIENT_SECRET;
 
-  if (!clientId) {
+  if (requireCredentials && !clientId) {
     throw new Error(
       "MURAL_CLIENT_ID is not set. Create an app at https://app.mural.co " +
         "(avatar menu -> 'Create and manage apps'), then export MURAL_CLIENT_ID.",
     );
   }
-  if (requireSecret && !clientSecret) {
+  if (requireCredentials && !clientSecret) {
     throw new Error(
       "MURAL_CLIENT_SECRET is not set. Mural requires the client secret on every " +
         "token exchange — there is no public-client mode. The secret is shown only " +
@@ -64,7 +69,7 @@ export function loadConfig(requireSecret = true): MuralConfig {
   }
 
   return {
-    clientId,
+    clientId: clientId ?? "",
     clientSecret: clientSecret ?? "",
     redirectUri:
       process.env.MURAL_REDIRECT_URI ?? "http://localhost:3000/callback",

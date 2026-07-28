@@ -211,7 +211,8 @@ export const ACTIONS: Action[] = [
   {
     id: "get_current_user",
     description: "Get the authenticated user's profile — useful for verifying the connection.",
-    path: "/current-user",
+    // Verified against the live API: the docs list /current-user, which 404s.
+    path: "/users/me",
     params: [],
     scope: "identity:read",
     keywords: ["me", "user", "profile", "whoami", "identity", "account"],

@@ -107,6 +107,17 @@ export async function refreshTokens(
   config: MuralConfig,
   tokens: TokenSet,
 ): Promise<TokenSet> {
+  // The server boots without credentials so cached tokens still serve reads.
+  // Refresh genuinely needs them, so fail here with a fix rather than sending
+  // empty strings to Mural and surfacing an opaque invalid_client error.
+  if (!config.clientId || !config.clientSecret) {
+    throw new Error(
+      "The Mural access token expired and cannot be refreshed: MURAL_CLIENT_ID " +
+        "and MURAL_CLIENT_SECRET are not set in this process's environment. Add " +
+        "them to the MCP server's env config (or your shell profile) and restart.",
+    );
+  }
+
   const data = await postToken({
     grant_type: "refresh_token",
     client_id: config.clientId,

@@ -30,7 +30,8 @@ import {
   buildRequest,
 } from "./actions.js";
 
-const config = loadConfig();
+// Boot on cached tokens alone; credentials are only needed to refresh.
+const config = loadConfig(false);
 const client = new MuralClient(config);
 
 const server = new McpServer(
@@ -93,7 +94,7 @@ server.registerTool(
         "No cached tokens. Run `npm run auth` in the mural-mcp directory.",
       );
     }
-    const user = await client.get<Record<string, unknown>>("/current-user");
+    const user = await client.get<Record<string, unknown>>("/users/me");
     return {
       connected: true,
       user: normalizeItems(user)[0] ?? user.value ?? user,
