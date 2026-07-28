@@ -1,18 +1,31 @@
 {
   "name": "mural-mcp",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+  "version": "2.0.0",
+  "description": "MCP server for the Mural public API (read-only)",
+  "main": "build/index.js",
+  "type": "module",
+  "bin": {
+    "mural-mcp": "build/index.js"
   },
-  "keywords": [],
+  "scripts": {
+    "build": "tsc && chmod +x build/index.js",
+    "auth": "node build/auth-cli.js",
+    "start": "node build/index.js",
+    "dev": "tsc --watch",
+    "legacy": "node index.js"
+  },
+  "keywords": ["mcp", "mural", "model-context-protocol"],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "axios": "^1.13.6"
+    "zod": "^3.25.76"
   },
-  "type": "module"
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
