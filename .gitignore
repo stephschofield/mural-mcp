@@ -1,0 +1,9 @@
+node_modules/
+build/
+*.log
+
+# Never commit credentials or cached OAuth tokens
+.env
+.env.*
+!.env.example
+tokens.json
