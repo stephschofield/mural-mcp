@@ -17,8 +17,13 @@ export interface Widget {
   plainText?: string;
   x?: number;
   y?: number;
+  width?: number;
+  height?: number;
   parentId?: string | null;
   style?: { backgroundColor?: string } | null;
+  createdBy?: unknown;
+  updatedBy?: unknown;
+  contentEditedBy?: unknown;
   [key: string]: unknown;
 }
 
@@ -30,6 +35,42 @@ export interface ExtractedText {
   y?: number;
   color?: string | null;
   parentId?: string | null;
+  createdBy?: string | null;
+  editedBy?: string | null;
+}
+
+/** A Mural user stamp, as attached to createdBy / updatedBy / contentEditedBy. */
+export interface UserRef {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  alias?: string;
+}
+
+/**
+ * Render a user stamp as a display name.
+ *
+ * Anonymous participants carry only `alias` ("Visiting Penguin"); signed-in
+ * members carry first/last. Falls back to the opaque id so a widget is never
+ * silently unattributed.
+ */
+export function userName(user: unknown): string | null {
+  if (!user || typeof user !== "object") return null;
+  const u = user as UserRef;
+  const full = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
+  return u.alias || full || u.id || null;
+}
+
+/**
+ * Who authored a widget's *content*.
+ *
+ * `createdBy` records who placed the widget, which on facilitated boards is the
+ * facilitator pre-seeding blank stickies — not the person whose idea it holds.
+ * `contentEditedBy` is the last person to change the text, which is the closest
+ * the API gets to authorship. Prefer it, fall back to creator.
+ */
+export function contentAuthor(widget: Widget): string | null {
+  return userName(widget.contentEditedBy) ?? userName(widget.createdBy);
 }
 
 const TEXT_FIELDS = ["text", "title", "htmlText", "content", "plainText"] as const;
@@ -111,6 +152,7 @@ export function isTextBearing(widget: Widget): boolean {
 export function extractTexts(
   widgets: Widget[],
   typeFilter?: string[],
+  includeAuthors = false,
 ): ExtractedText[] {
   const filters = typeFilter?.map((t) => t.toLowerCase()).filter(Boolean);
   const out: ExtractedText[] = [];
@@ -135,10 +177,59 @@ export function extractTexts(
       y: widget.y,
       color: widget.style?.backgroundColor ?? null,
       parentId: widget.parentId ?? null,
+      ...(includeAuthors
+        ? {
+            createdBy: userName(widget.createdBy),
+            editedBy: userName(widget.contentEditedBy),
+          }
+        : {}),
     });
   }
 
   return out;
+}
+
+/**
+ * Reduce a widget to the fields that carry meaning for analysis.
+ *
+ * Raw Mural widgets are ~1.5 KB each (avatar URLs with signed query strings,
+ * presentation indices, style sub-objects), so a 900-widget board is well over
+ * a megabyte. Projecting to geometry + authorship keeps a whole board readable.
+ */
+export function projectWidget(widget: Widget): Record<string, unknown> {
+  return {
+    id: widget.id,
+    type: widgetTypeLabel(widget),
+    text: extractTextFromWidget(widget),
+    x: widget.x,
+    y: widget.y,
+    width: widget.width,
+    height: widget.height,
+    parentId: widget.parentId ?? null,
+    color: widget.style?.backgroundColor ?? null,
+    createdBy: userName(widget.createdBy),
+    editedBy: userName(widget.contentEditedBy),
+  };
+}
+
+/** Tally who authored the content on a board, by widget type. */
+export function summarizeAuthors(
+  widgets: Widget[],
+  typeFilter?: string[],
+): Record<string, number> {
+  const filters = typeFilter?.map((t) => t.toLowerCase()).filter(Boolean);
+  const counts: Record<string, number> = {};
+
+  for (const w of widgets) {
+    if (filters?.length && !filters.some((f) => rawType(w).includes(f))) continue;
+    // Only count widgets that actually hold content — blank pre-seeded
+    // stickies would otherwise inflate the facilitator's share.
+    if (!extractTextFromWidget(w)) continue;
+    const who = contentAuthor(w) ?? "(unattributed)";
+    counts[who] = (counts[who] ?? 0) + 1;
+  }
+
+  return Object.fromEntries(Object.entries(counts).sort((a, b) => b[1] - a[1]));
 }
 
 /** Count widgets by human-readable type. */

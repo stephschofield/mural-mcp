@@ -20,7 +20,10 @@ import { loadTokens } from "./auth.js";
 import {
   extractTexts,
   summarizeWidgets,
+  summarizeAuthors,
+  projectWidget,
   inReadingOrder,
+  rawType,
   type Widget,
 } from "./widgets.js";
 import {
@@ -222,10 +225,18 @@ server.registerTool(
 
 // ── Board contents ──────────────────────────────────────────────────────────
 
-/** Fetch every widget on a mural, following pagination. */
+/**
+ * Fetch every widget on a mural, following pagination.
+ *
+ * maxPages is generous because widget pages are small (~100 items) and a
+ * workshop board can hold thousands; the response is projected or filtered
+ * downstream, so a complete fetch does not imply a huge tool result.
+ */
 async function fetchWidgets(muralId: string) {
   return client.getAllPages<Widget>(
     `/murals/${encodeURIComponent(muralId)}/widgets`,
+    {},
+    100,
   );
 }
 
@@ -253,6 +264,13 @@ server.registerTool(
           "Group results by sticky-note color, which often encodes categories " +
             "in workshop boards.",
         ),
+      authors: z
+        .boolean()
+        .optional()
+        .describe(
+          "Attach who created and who last edited each item. Use get_mural_authors " +
+            "for a per-person rollup instead.",
+        ),
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
@@ -261,13 +279,15 @@ server.registerTool(
       muralId,
       types,
       groupByColor,
+      authors,
     }: {
       muralId: string;
       types?: string[];
       groupByColor?: boolean;
+      authors?: boolean;
     }) => {
       const { items, truncated } = await fetchWidgets(muralId);
-      const texts = inReadingOrder(extractTexts(items, types));
+      const texts = inReadingOrder(extractTexts(items, types, authors));
 
       if (!groupByColor) {
         return {
@@ -326,32 +346,141 @@ server.registerTool(
   {
     title: "Get raw mural widgets",
     description:
-      "Return raw widget objects including geometry and style. Use when you need " +
-      "positions, colors, or fields that get_mural_text omits. Prefer get_mural_text " +
-      "for reading content — this is far more verbose.",
+      "Return widget objects including geometry, style, and authorship. Use when " +
+      "you need positions, colors, or who wrote what — fields get_mural_text omits. " +
+      "Returns a compact projection by default; pass full=true for raw API objects " +
+      "(very verbose — roughly 1.5 KB per widget). Page through large boards with " +
+      "offset, and use the returned `nextOffset` to continue.",
     inputSchema: {
       muralId: z.string().describe("Mural id from list_murals."),
       limit: z
         .number()
         .int()
         .positive()
-        .max(200)
+        .max(1000)
         .optional()
-        .describe("Max widgets to return (default 50). Keeps responses manageable."),
+        .describe(
+          "Max widgets to return (default 250 projected, 50 when full=true).",
+        ),
+      offset: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Index to start from. Use nextOffset from a prior call to page."),
+      types: z
+        .array(z.string())
+        .optional()
+        .describe('Filter by widget type substring, e.g. ["sticky"].'),
+      full: z
+        .boolean()
+        .optional()
+        .describe(
+          "Return raw unprojected widget objects. Verbose; prefer the default.",
+        ),
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  handler(async ({ muralId, limit }: { muralId: string; limit?: number }) => {
-    const { items, truncated } = await fetchWidgets(muralId);
-    const cap = limit ?? 50;
-    return {
+  handler(
+    async ({
       muralId,
-      totalWidgets: items.length,
-      returned: Math.min(cap, items.length),
-      truncated: truncated || items.length > cap,
-      widgets: items.slice(0, cap),
-    };
-  }),
+      limit,
+      offset,
+      types,
+      full,
+    }: {
+      muralId: string;
+      limit?: number;
+      offset?: number;
+      types?: string[];
+      full?: boolean;
+    }) => {
+      const { items, truncated } = await fetchWidgets(muralId);
+
+      const filters = types?.map((t) => t.toLowerCase()).filter(Boolean);
+      const matching = filters?.length
+        ? items.filter((w) => filters.some((f) => rawType(w).includes(f)))
+        : items;
+
+      const start = offset ?? 0;
+      const cap = limit ?? (full ? 50 : 250);
+      const page = matching.slice(start, start + cap);
+      const end = start + page.length;
+      const more = end < matching.length;
+
+      return {
+        muralId,
+        totalWidgets: items.length,
+        matchingWidgets: matching.length,
+        offset: start,
+        returned: page.length,
+        nextOffset: more ? end : null,
+        // `truncated` means the API paginated past our page budget; `more`
+        // means this response is one page of a complete local result set.
+        truncated: truncated || more,
+        fetchTruncated: truncated,
+        widgets: full ? page : page.map(projectWidget),
+      };
+    },
+  ),
+);
+
+server.registerTool(
+  "get_mural_authors",
+  {
+    title: "Get mural authorship",
+    description:
+      "Report who wrote the content on a board, and optionally list each person's " +
+      "widgets. Attribution uses contentEditedBy (who last changed the text) rather " +
+      "than createdBy, because on facilitated boards the facilitator creates blank " +
+      "widgets that participants then fill in. Note: duplicating a mural reassigns " +
+      "createdBy to the copier, so authorship survives only on the original board.",
+    inputSchema: {
+      muralId: z.string().describe("Mural id from list_murals."),
+      types: z
+        .array(z.string())
+        .optional()
+        .describe('Filter by widget type, e.g. ["sticky"]. Omit for all.'),
+      detail: z
+        .boolean()
+        .optional()
+        .describe("Include each author's widget texts, not just counts."),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+  handler(
+    async ({
+      muralId,
+      types,
+      detail,
+    }: {
+      muralId: string;
+      types?: string[];
+      detail?: boolean;
+    }) => {
+      const { items, truncated } = await fetchWidgets(muralId);
+      const counts = summarizeAuthors(items, types);
+
+      if (!detail) {
+        return { muralId, totalWidgets: items.length, truncated, authors: counts };
+      }
+
+      const texts = inReadingOrder(extractTexts(items, types, true));
+      const byAuthor: Record<string, { text: string; parentId: string | null }[]> = {};
+      for (const t of texts) {
+        const who = t.editedBy ?? t.createdBy ?? "(unattributed)";
+        (byAuthor[who] ??= []).push({ text: t.text, parentId: t.parentId ?? null });
+      }
+
+      return {
+        muralId,
+        totalWidgets: items.length,
+        truncated,
+        authors: counts,
+        byAuthor,
+      };
+    },
+  ),
 );
 
 // ── Search ──────────────────────────────────────────────────────────────────
