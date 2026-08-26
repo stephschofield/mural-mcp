@@ -37,19 +37,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Widget fixture tests
+        run: node --test build/widgets.test.js
+
       - name: Verify the server boots and speaks MCP
-        run: |
-          # An MCP server must respond to initialize on stdio. No Mural
-          # credentials are present, so this also proves the server starts
-          # without them -- the documented cached-token-only boot path.
-          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
-            | timeout 20s node build/index.js > out.json 2> err.log || true
-          echo "--- stderr ---"; cat err.log
-          echo "--- stdout ---"; cat out.json
-          grep -q '"serverInfo"' out.json \
-            || { echo "::error::Server did not return a valid initialize response"; exit 1; }
-          grep -q 'mural-mcp' out.json \
-            || { echo "::error::initialize response did not identify as mural-mcp"; exit 1; }
+        run: node scripts/verify-mcp.mjs
 
   secret-scan:
     name: Secret scan

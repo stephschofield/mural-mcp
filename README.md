@@ -2,10 +2,10 @@
 
 # Mural MCP Server
 
-**Read your Mural boards from Claude.**
+**Read your Mural boards from GitHub Copilot and Claude.**
 
-Pull sticky-note text, summarize workshop output, browse workspaces, and reach
-the wider Mural API — all without leaving your assistant.
+Pull sticky-note text, images, and stickers, summarize workshop output, browse
+workspaces, and reach the wider Mural API, all without leaving your assistant.
 
 [![CI](https://github.com/stephschofield/mural-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/stephschofield/mural-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -30,8 +30,8 @@ Mural has a capable public API, but reaching it means OAuth plumbing,
 change shape by endpoint. That is a day of work before you read your first
 sticky note.
 
-**This server closes that gap.** Point Claude at a board and ask for what you
-need.
+**This server closes that gap.** Point Copilot or Claude at a board and ask
+for what you need.
 
 ```
 You:    Read our Sprint Retro board grouped by color and give me the
@@ -116,14 +116,16 @@ export MURAL_CLIENT_SECRET=your_client_secret
 # 3. Authorize — opens a browser, caches tokens at ~/.mural-mcp/tokens.json (0600)
 npm run auth
 
-# 4. Register with Claude Code
-claude mcp add mural --scope user \
-  -e MURAL_CLIENT_ID="$MURAL_CLIENT_ID" \
-  -e MURAL_CLIENT_SECRET="$MURAL_CLIENT_SECRET" \
+# 4. Register with GitHub Copilot CLI (or see docs/COPILOT.md for VS Code)
+copilot mcp add mural \
+  --env MURAL_CLIENT_ID="$MURAL_CLIENT_ID" \
+  --env MURAL_CLIENT_SECRET="$MURAL_CLIENT_SECRET" \
   -- node "$(pwd)/build/index.js"
 ```
 
-Restart Claude Code, run `/mcp` to confirm, then ask: *"Check my Mural connection."*
+Start Copilot CLI, run `/mcp` to confirm, then ask: *"Check my Mural connection."*
+
+Claude Code remains supported: see the [Installation Guide](docs/INSTALLATION.md).
 
 > When creating the Mural app, set the **Redirect URL** to exactly
 > `http://localhost:3000/callback` and enable these scopes:
@@ -144,16 +146,17 @@ Claude Desktop, WSL, headless hosts, and troubleshooting are covered in the
 | `list_rooms` | List rooms in a workspace |
 | `list_murals` | List murals in a room or workspace |
 | `get_mural` | Metadata for one mural |
-| **`get_mural_text`** | **Main tool** — all text in reading order, optional color grouping |
+| **`get_mural_text`** | **Main text tool** — all text in reading order, optional color grouping |
+| **`get_mural_structure`** | **Workshop capture** — sticky notes, text, images, stickers, areas |
 | `get_mural_summary` | Widget counts by type + text sample |
 | `get_mural_widgets` | Raw widgets with geometry and style |
 | `search_murals` | Find murals by text query |
 | `search_actions` | Discover 24 more read-only API operations |
 | `execute_action` | Run a discovered action |
 
-Typical flow: `list_workspaces` → `list_rooms` → `list_murals` → `get_mural_text`
+Typical flow: `list_workspaces` → `list_rooms` → `list_murals` → `get_mural_structure` or `get_mural_text`
 
-**Why 11 tools and not 100.** Mural exposes roughly a hundred endpoints.
+**Why 12 tools and not 100.** Mural exposes roughly a hundred endpoints.
 Declaring each as its own tool would put a hundred schemas in the context window
 on *every* request, degrading tool selection and raising cost. Instead, the
 high-traffic paths get dedicated tools with typed schemas, and the remaining 24
@@ -189,6 +192,7 @@ interpretation instead of arriving as a shuffled deck.
 
 | Document | Contents |
 |---|---|
+| [Copilot](docs/COPILOT.md) | GitHub Copilot CLI and VS Code Copilot Chat |
 | [Installation](docs/INSTALLATION.md) | Full setup, all clients, config reference, troubleshooting |
 | [Usage](docs/USAGE.md) | Recipes by role; working with large boards; prompting tips |
 | [API Reference](docs/API.md) | Every tool and action, parameters, return shapes, limits |
@@ -217,7 +221,8 @@ legacy/           v1 prototype (March 2026), archived — see legacy/README.md
 ```bash
 npm run dev        # tsc --watch
 npm run typecheck  # no emit
-npm run build      # compile + chmod
+npm run build      # compile (chmod on Unix only)
+npm test           # build + widget fixtures + MCP handshake
 ```
 
 CI runs typecheck and build on Node 18/20/22, boots the server to verify it

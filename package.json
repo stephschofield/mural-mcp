@@ -1,18 +1,19 @@
 {
   "name": "mural-mcp",
-  "version": "2.0.0",
-  "description": "Read-only Model Context Protocol server for the Mural public API — read boards, sticky notes, and workshop content from Claude.",
+  "version": "2.1.0",
+  "description": "Read-only Model Context Protocol server for the Mural public API. Read boards, sticky notes, images, and stickers from Copilot CLI, VS Code Copilot Chat, or Claude.",
   "main": "build/index.js",
   "type": "module",
   "bin": {
     "mural-mcp": "build/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x build/index.js",
+    "build": "tsc && node scripts/make-executable.mjs",
     "auth": "node build/auth-cli.js",
     "start": "node build/index.js",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test build/widgets.test.js && node scripts/verify-mcp.mjs",
     "prepare": "npm run build"
   },
   "keywords": [
@@ -21,6 +22,8 @@
     "model-context-protocol",
     "claude",
     "claude-code",
+    "github-copilot",
+    "vscode",
     "miro-alternative",
     "whiteboard",
     "oauth",

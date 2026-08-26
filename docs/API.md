@@ -25,6 +25,7 @@ when to reach for each one.
 | [`list_murals`](#list_murals) | Finding boards in a room or workspace |
 | [`get_mural`](#get_mural) | You need a board's metadata, not its contents |
 | [`get_mural_text`](#get_mural_text) | **Most common** — reading what a board says |
+| [`get_mural_structure`](#get_mural_structure) | Workshop capture: stickies, notes, images, stickers, areas |
 | [`get_mural_summary`](#get_mural_summary) | Deciding whether a board is worth reading in full |
 | [`get_mural_widgets`](#get_mural_widgets) | You need positions, colors, or raw fields |
 | [`search_murals`](#search_murals) | The user named a board but you lack its id |
@@ -33,7 +34,7 @@ when to reach for each one.
 
 All tools are annotated `readOnlyHint: true`. None can modify Mural.
 
-**Typical flow:** `list_workspaces` → `list_rooms` → `list_murals` → `get_mural_text`
+**Typical flow:** `list_workspaces` → `list_rooms` → `list_murals` → `get_mural_structure` or `get_mural_text`
 
 ---
 
@@ -204,12 +205,55 @@ With `groupByColor: true`, `items` is replaced by `groupedByColor`:
 ```
 
 > **Color encodes meaning.** Workshop boards routinely use sticky color as a
-> category axis — went-well vs. needs-improvement, or one color per workstream.
+> category axis (went-well vs. needs-improvement, or one color per workstream).
 > `groupByColor` recovers that structure, which plain text order loses.
 
 **Reading order:** items are sorted by `y`, then `x`, with a 100-unit row
 tolerance so stickies in a visual row stay together rather than scattering by a
 few pixels of vertical drift.
+
+---
+
+### `get_mural_structure`
+
+Workshop capture. Splits every widget into areas, sticky notes, other text
+notes, images, and stickers/icons (Mural `icon` widgets). Use this for
+envisioning boards where photos, logos, and vote stickers matter alongside
+stickies.
+
+| Parameter | Type | Required | Description |
+|---|---|:---:|---|
+| `muralId` | string | yes | From `list_murals` |
+
+**Returns**
+
+```jsonc
+{
+  "muralId": "...",
+  "widgetsScanned": 868,
+  "truncated": false,
+  "counts": {
+    "areas": 6,
+    "stickyNotes": 80,
+    "notes": 40,
+    "images": 12,
+    "stickers": 28,
+    "other": 70
+  },
+  "areas": [{ "id": "...", "type": "Area", "text": "Journey map", "x": 0, "y": 0 }],
+  "stickyNotes": [{ "id": "...", "type": "Sticky Note", "text": "Need SSO", "color": "#FFF2CC" }],
+  "notes": [{ "id": "...", "type": "Text", "text": "Pain points" }],
+  "images": [{
+    "id": "...", "type": "Image", "name": "current-state.png",
+    "caption": "As-is process", "url": "https://..."
+  }],
+  "stickers": [{ "id": "...", "type": "Sticker", "name": "thumbs-up" }]
+}
+```
+
+Image and sticker URLs are taken from the first populated field among `url`,
+`src`, `thumbnailUrl`, `imageUrl`, `hyperlink`, and `href`, including nested
+`properties`. Prefer `get_mural_text` when you only need words.
 
 ---
 

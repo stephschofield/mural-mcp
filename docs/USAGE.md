@@ -20,7 +20,8 @@ output as text, **engineers** who need board data in a pipeline, and
 Almost everything starts here:
 
 ```
-list_workspaces  →  list_rooms  →  list_murals  →  get_mural_text
+list_workspaces  →  list_rooms  →  list_murals  →  get_mural_structure
+                                                     or get_mural_text
 ```
 
 In practice you just ask, and the model walks the chain:
@@ -37,6 +38,15 @@ If you already know the board name, skip the walk:
 ---
 
 ## For product managers
+
+### Capture stickies, images, and stickers together
+
+> Read mural `<id>` with get_mural_structure and tell me how the board is
+> laid out: areas, sticky themes, what the images show, and which stickers
+> look like votes.
+
+`get_mural_structure` is the workshop tool. `get_mural_text` only returns
+words, so photos and vote icons would be dropped.
 
 ### Turn a workshop board into a written summary
 
