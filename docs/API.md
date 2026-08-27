@@ -182,8 +182,8 @@ boxes, shapes, titles, cards, comments — in visual reading order
 ```jsonc
 {
   "muralId": "...",
-  "widgetsScanned": 868,
-  "textItems": 287,
+  "widgetsScanned": 240,
+  "textItems": 90,
   "truncated": false,
   "items": [{
     "id": "...", "type": "Sticky Note", "text": "Ship the docs",
@@ -230,7 +230,7 @@ stickies.
 ```jsonc
 {
   "muralId": "...",
-  "widgetsScanned": 868,
+  "widgetsScanned": 240,
   "truncated": false,
   "counts": {
     "areas": 6,
@@ -271,10 +271,10 @@ use it to decide whether a board is worth reading in full.
 ```jsonc
 {
   "muralId": "...",
-  "totalWidgets": 868,
+  "totalWidgets": 240,
   "truncated": false,
-  "widgetTypes": { "Sticky Note": 80, "Text": 88, "Shape": 40 },
-  "textItemCount": 287,
+  "widgetTypes": { "Sticky Note": 80, "Text": 24, "Shape": 12 },
+  "textItemCount": 90,
   "sampleText": ["Retro — Sprint 14", "Went well: pairing"]
 }
 ```

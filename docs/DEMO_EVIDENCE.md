@@ -1,4 +1,4 @@
-# Mural MCP Server — verified evidence
+# Mural MCP Server: verified evidence
 
 ## Live MCP handshake
 - Server identifies as `mural-mcp` v2.0.0, protocol 2024-11-05
@@ -26,5 +26,7 @@
 - No credential files tracked, no secret literals, no PII
 - CI gates every push on gitleaks + tracked-file scan
 
-## Scale proven on real data
-- Large boards (hundreds of widgets) were used to verify page walks and parsing. Examples in the docs use invented counts, not a named workshop.
+## Scale
+
+Page walks and widget parsing were tested against large boards (hundreds of
+widgets). Examples in the docs use invented counts, not a named workshop.

@@ -298,7 +298,8 @@ re-run `npm run auth` if the required scopes changed.
 ## Uninstalling
 
 ```bash
-claude mcp remove mural --scope user   # or remove the entry from your client config
+copilot mcp remove mural               # Copilot CLI user config
+# VS Code: MCP: List Servers → mural → Delete
 rm -rf ~/.mural-mcp                    # delete the cached tokens
 ```
 
@@ -333,7 +334,7 @@ ls -l ~/.mural-mcp/tokens.json
 [ -n "$MURAL_CLIENT_SECRET" ] && echo "client secret: set" || echo "client secret: MISSING"
 
 # Does the server start?
-node build/index.js   # expect: "mural-mcp v2.0.0 ready (read-only)" on stderr; Ctrl-C to exit
+node build/index.js   # expect: "mural-mcp v2.1.0 ready (read-only)" on stderr; Ctrl-C to exit
 ```
 
 > Never paste the output of `echo $MURAL_CLIENT_SECRET` into an issue, a PR, or
