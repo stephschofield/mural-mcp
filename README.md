@@ -283,6 +283,21 @@ color is a category).
 
 Recipes: [docs/USAGE.md](docs/USAGE.md).
 
+For a comprehensive workshop assessment in Copilot CLI, install this repository
+as a plugin and invoke the included skill:
+
+```powershell
+copilot plugin install stephschofield/mural-mcp
+```
+
+```text
+/mural:assess <Mural board URL and assessment request>
+```
+
+The skill combines board text and visual structure with an optional workshop
+date, transcript, and supporting files from the current project. See
+[Copilot setup](docs/COPILOT.md#assessment-skill).
+
 ---
 
 ## Tools
