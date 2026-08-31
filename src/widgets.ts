@@ -97,7 +97,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 const STICKY_TYPES = new Set(["sticky_note", "stickynote", "sticky note"]);
 const AREA_TYPES = new Set(["area", "framework"]);
-const IMAGE_TYPES = new Set(["image", "file"]);
+const IMAGE_TYPES = new Set(["image"]);
 const STICKER_TYPES = new Set([
   "icon",
   "sticker",
@@ -216,8 +216,8 @@ function firstString(widget: Widget, keys: string[]): string | null {
   const props = asRecord(widget.properties);
   if (props) bags.push(props);
 
-  for (const bag of bags) {
-    for (const key of keys) {
+  for (const key of keys) {
+    for (const bag of bags) {
       const raw = bag[key];
       if (typeof raw === "string" && raw.trim()) return raw.trim();
     }
@@ -274,8 +274,7 @@ export function extractStructure(widgets: Widget[]): BoardStructure {
     if (AREA_TYPES.has(type)) {
       areas.push(toTextItem(widget, widgetTypeLabel(widget)));
     } else if (STICKY_TYPES.has(type)) {
-      const text = extractTextFromWidget(widget);
-      if (text) stickyNotes.push(toTextItem(widget));
+      stickyNotes.push(toTextItem(widget));
     } else if (IMAGE_TYPES.has(type)) {
       images.push(toVisualAsset(widget));
     } else if (STICKER_TYPES.has(type)) {

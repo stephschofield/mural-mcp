@@ -4,7 +4,9 @@
  */
 import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
+import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
+import { sendVerificationRequests } from "./mcp-verifier.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const serverPath = join(root, "build", "index.js");
@@ -24,10 +26,6 @@ const REQUIRED_TOOLS = [
   "execute_action",
 ];
 
-function rpc(id, method, params) {
-  return JSON.stringify({ jsonrpc: "2.0", id, method, params });
-}
-
 const child = spawn(process.execPath, [serverPath], {
   stdio: ["pipe", "pipe", "pipe"],
   windowsHide: true,
@@ -45,19 +43,26 @@ child.stderr.on("data", (chunk) => {
   stderr += chunk;
 });
 
-const init = rpc(1, "initialize", {
-  protocolVersion: "2024-11-05",
-  capabilities: {},
-  clientInfo: { name: "verify-mcp", version: "0" },
+let resolveInitialize;
+const initializeResponse = new Promise((resolve) => {
+  resolveInitialize = resolve;
 });
-const list = rpc(2, "tools/list", {});
 
-child.stdin.write(`${init}\n`);
-child.stdin.write(
-  `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`,
-);
-child.stdin.write(`${list}\n`);
-child.stdin.end();
+createInterface({ input: child.stdout }).on("line", (line) => {
+  try {
+    const message = JSON.parse(line);
+    if (message.id === 1) resolveInitialize(message);
+  } catch {
+    // The complete stdout validation below reports malformed protocol output.
+  }
+});
+
+void sendVerificationRequests(
+  (message) => child.stdin.write(`${message}\n`),
+  () => initializeResponse,
+)
+  .then(() => child.stdin.end())
+  .catch((error) => fail(`Failed to complete MCP initialization: ${error}`));
 
 const timeout = setTimeout(() => {
   child.kill();
