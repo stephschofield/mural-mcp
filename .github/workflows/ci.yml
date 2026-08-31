@@ -43,6 +43,9 @@ jobs:
       - name: Verify the server boots and speaks MCP
         run: node scripts/verify-mcp.mjs
 
+      - name: Verify Copilot skill contracts
+        run: node scripts/verify-skill.mjs all
+
   windows-build:
     name: Windows build (Node 22)
     runs-on: windows-latest

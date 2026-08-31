@@ -24,12 +24,12 @@ This is an autonomous assessment workflow. Once required inputs are available, c
 
 Before assessing the board, collect missing context in one prompt. Use `ask_user` when available and ask for:
 
-1. Workshop date, including time zone when known.
+1. Workshop date, including time zone when known, or confirmation that the date is unavailable.
 2. Meeting transcript filename or project-relative path, or confirmation that no transcript is available.
 3. Additional document filenames or project-relative paths, or confirmation that there are none.
 4. Intended audience or special emphasis only when the invocation does not already make it clear.
 
-Do not make a transcript or supporting document mandatory. If the user confirms one is unavailable, proceed and state the limitation in the digest. Do not infer a workshop date from file timestamps.
+Do not make the workshop date, a transcript, or supporting documents mandatory. If the user confirms any of them is unavailable, proceed and state the limitation in the digest. Do not infer a workshop date from file timestamps.
 
 If the user names a transcript or supporting document, search the current project directory and its children before asking again. Use narrow filename matching first, then common workshop file types such as `.txt`, `.md`, `.vtt`, `.srt`, `.docx`, `.pdf`, `.pptx`, and `.xlsx`. Ignore dependency, build, VCS, and hidden state directories unless the user explicitly points there.
 

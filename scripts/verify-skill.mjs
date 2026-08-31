@@ -48,6 +48,7 @@ async function verifyWorkflow() {
     skill,
     [
       "Workshop date",
+      "confirmation that the date is unavailable",
       "Meeting transcript filename",
       "Additional document filenames",
       "search the current project directory",
