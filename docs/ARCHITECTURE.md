@@ -139,7 +139,7 @@ Mural exposes roughly a hundred endpoints. Two obvious designs both fail:
 
 This server does both, split by traffic:
 
-- **Eleven dedicated tools** cover the high-traffic paths (navigation, board
+- **10 dedicated tools** cover the high-traffic paths (navigation, board
   contents including workshop structure, search). These carry rich descriptions
   and typed Zod schemas, so the model uses them correctly without guessing.
 - **`search_actions` + `execute_action`** reach the long tail. The model

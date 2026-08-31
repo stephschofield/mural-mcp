@@ -20,17 +20,22 @@ import {
 import { exchangeCode, saveTokens } from "./auth.js";
 
 function openBrowser(url: string): void {
-  const cmd =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "start"
-        : "xdg-open";
-  try {
-    spawn(cmd, [url], { detached: true, stdio: "ignore" }).unref();
-  } catch {
+  // cmd /c re-parses the line, so an unquoted URL is split on '&'.
+  const child =
+    process.platform === "win32"
+      ? spawn("cmd.exe", ["/c", "start", "", `"${url}"`], {
+          detached: true,
+          stdio: "ignore",
+          windowsHide: true,
+        })
+      : spawn(process.platform === "darwin" ? "open" : "xdg-open", [url], {
+          detached: true,
+          stdio: "ignore",
+        });
+  child.on("error", () => {
     /* Headless or WSL — the printed URL is the fallback. */
-  }
+  });
+  child.unref();
 }
 
 /** Wait for Mural to redirect back with ?code=..., validating state. */

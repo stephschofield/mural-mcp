@@ -13,7 +13,7 @@
     "start": "node build/index.js",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test build/widgets.test.js && node scripts/verify-mcp.mjs && node scripts/verify-skill.mjs all",
+    "test": "npm run build && node --test build/widgets.test.js scripts/*.test.mjs && node scripts/verify-mcp.mjs && node scripts/verify-skill.mjs all",
     "prepare": "npm run build"
   },
   "keywords": [
