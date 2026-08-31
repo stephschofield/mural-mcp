@@ -71,4 +71,35 @@ describe("extractStructure", () => {
   it("labels icon widgets as stickers", () => {
     assert.equal(widgetTypeLabel({ type: "icon" }), "Sticker");
   });
+
+  it("prefers an image URL in properties over a top-level link", () => {
+    const structure = extractStructure([
+      {
+        type: "image",
+        href: "https://example.com/click-through",
+        properties: { imageUrl: "https://example.com/image.png" },
+      },
+    ]);
+
+    assert.equal(structure.images[0]?.url, "https://example.com/image.png");
+  });
+
+  it("retains blank sticky notes", () => {
+    const structure = extractStructure([
+      { id: "blank", type: "sticky_note", text: "   " },
+    ]);
+
+    assert.equal(structure.stickyNotes.length, 1);
+    assert.equal(structure.stickyNotes[0]?.id, "blank");
+    assert.equal(structure.stickyNotes[0]?.text, "");
+  });
+
+  it("does not classify generic file attachments as images", () => {
+    const structure = extractStructure([
+      { id: "pdf", type: "file", name: "workshop-notes.pdf" },
+    ]);
+
+    assert.equal(structure.images.length, 0);
+    assert.equal(structure.otherCount, 1);
+  });
 });
