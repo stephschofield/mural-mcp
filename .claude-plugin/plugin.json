@@ -1,0 +1,6 @@
+{
+  "name": "mural",
+  "version": "1.0.0",
+  "description": "Assess Mural workshop boards with meeting transcripts and supporting project documents.",
+  "skills": "./skills/"
+}

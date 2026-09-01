@@ -204,6 +204,30 @@ in their own `~/.mural-mcp/tokens.json`.
 
 ## Workshop prompts
 
+### Assessment skill
+
+Install this repository as a Copilot CLI plugin to add the namespaced
+`/mural:assess` skill:
+
+```powershell
+copilot plugin install stephschofield/mural-mcp
+```
+
+The Mural MCP server must also be configured and authenticated as described
+above. Start Copilot in the project containing the workshop transcript and
+supporting files, then run:
+
+```text
+/mural:assess Read https://app.mural.co/t/example/m/example/1234567890 and create an executive workshop digest.
+```
+
+The skill asks for the workshop date, transcript, and additional project
+documents. It captures board text and visual structure, reconciles the board
+with the supplied context, and reports outcomes, key points, decisions, open
+questions, activities, follow-ups, and evidence limitations.
+
+### Prompt examples
+
 After the server is connected, in Copilot CLI or VS Code Agent chat:
 
 ```
