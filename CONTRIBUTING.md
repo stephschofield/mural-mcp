@@ -34,7 +34,8 @@ You will need your own Mural app to test against the live API — see the
 ```bash
 npm run dev        # tsc --watch
 npm run typecheck  # no emit — must pass before you push
-npm run build      # compile + chmod
+npm run build      # compile (chmod on Unix only)
+npm test           # widget fixtures + MCP handshake
 ```
 
 ## Making a change

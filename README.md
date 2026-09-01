@@ -2,226 +2,366 @@
 
 # Mural MCP Server
 
-**Read your Mural boards from Claude.**
+**Read Mural boards from GitHub Copilot CLI and VS Code Copilot Chat.**
 
-Pull sticky-note text, summarize workshop output, browse workspaces, and reach
-the wider Mural API — all without leaving your assistant.
+Pull sticky notes, text, images, and stickers. Summarize workshop output.
+Browse workspaces. All read-only.
 
 [![CI](https://github.com/stephschofield/mural-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/stephschofield/mural-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
 [![Read-only](https://img.shields.io/badge/access-read--only-blue.svg)](SECURITY.md#design-guarantees)
 
-[Install](#quickstart) · [Usage](docs/USAGE.md) · [API](docs/API.md) · [Architecture](docs/ARCHITECTURE.md) · [Security](SECURITY.md)
+[Install](#install) · [Copilot](docs/COPILOT.md) · [Usage](docs/USAGE.md) · [API](docs/API.md) · [Security](SECURITY.md)
 
 </div>
 
 ---
 
-## The problem
+This is a local [Model Context Protocol](https://modelcontextprotocol.io/)
+server. GitHub Copilot CLI, VS Code Copilot Chat, and other MCP clients start
+it over stdio. It talks to the [Mural public API](https://developers.mural.co/public)
+with **read scopes only**. It cannot create, edit, or delete boards.
 
-A workshop ends. Ninety sticky notes sit on a Mural board, color-coded, grouped
-into columns that meant something in the room. Turning that into a summary, a
-backlog, or a decision record is manual transcription — so mostly it does not
-happen, and the board becomes a screenshot nobody reads again.
+**Do not put secrets in this repository.** Client IDs, client secrets, and
+OAuth tokens stay in your environment or in `~/.mural-mcp/tokens.json` on your
+machine. Those paths are gitignored.
 
-Mural has a capable public API, but reaching it means OAuth plumbing,
-15-minute token expiry, pagination, rate limits, and response envelopes that
-change shape by endpoint. That is a day of work before you read your first
-sticky note.
+---
 
-**This server closes that gap.** Point Claude at a board and ask for what you
-need.
+## Install
 
-```
-You:    Read our Sprint Retro board grouped by color and give me the
-        top themes with counts, plus every action item.
+Budget about ten minutes. Most of that is the Mural app form.
 
-Claude: (list_workspaces → list_rooms → list_murals → get_mural_text)
+### 1. Prerequisites
 
-        Scanned 240 widgets, 90 text items across 3 color categories.
-
-        Went well (green, 31)     — pairing cadence, faster reviews
-        Needs work (yellow, 44)   — flaky CI, unclear ownership
-        Blockers (red, 12)        — staging parity, on-call load
-
-        Action items: 8 → [table]
-```
-
-## Who it is for
-
-| | |
+| Need | Check |
 |---|---|
-| **Product managers** | Turn workshop boards into written summaries, themes, and action items. Recover the category structure encoded in sticky colors. |
-| **Engineers** | Pull board data into files and pipelines. Audit access. Inspect raw widget geometry. Reach ~100 endpoints without writing OAuth code. |
-| **Facilitators** | Draft post-session recaps, surface unanswered questions, retrieve voting results and decisions. |
+| Node.js 18 or newer | `node --version` |
+| npm | Ships with Node |
+| A Mural account | You must be allowed to create an app |
+| GitHub Copilot CLI and/or VS Code | CLI: `copilot --version`. VS Code: 1.99+ with Copilot Chat |
 
-Recipes for each in the **[Usage Guide](docs/USAGE.md)**.
-
-## Demo
-
-<!-- SHOWOFF:BEGIN -->
-
-<div align="center">
-
-*A 30-second walkthrough is being produced with [ShowOff](https://github.com/All-The-Vibes/ShowOff).
-Run `/showoff` in this repository to generate `showoff.mp4` and `showoff.jpg`,
-then replace this block with the poster-linked embed below.*
-
-</div>
-
-<details>
-<summary>Embed snippet to paste once the video is rendered</summary>
-
-```markdown
-[![Mural MCP Server demo](showoff-output/<timestamp>/showoff.jpg)](showoff-output/<timestamp>/showoff.mp4)
-```
-
-GitHub renders a linked poster image rather than an inline player for repository
-files. For an inline player, drag `showoff.mp4` into any issue or PR comment,
-then use the `user-attachments` URL GitHub returns.
-
-</details>
-
-<!-- SHOWOFF:END -->
-
-## Read-only by design
-
-This server **cannot create, modify, or delete anything** in Mural. That is
-structural, not a policy note — four independent layers enforce it:
-
-1. **Scopes.** OAuth requests `*:read` only. Mural itself rejects writes.
-2. **Client surface.** `MuralClient` exposes exactly one verb: `get()`. No
-   `post`/`put`/`patch`/`delete` method exists to call.
-3. **Catalog.** The action catalog contains only GET paths, so no crafted
-   argument turns `execute_action` into a write.
-4. **Declared contract.** Every tool sets `readOnlyHint: true`.
-
-Adding write support would require deliberately editing three files. See
-[SECURITY.md](SECURITY.md#design-guarantees).
-
-## Quickstart
-
-**Prerequisites:** Node 18+, a Mural account, an MCP client.
+### 2. Clone and build
 
 ```bash
-# 1. Install
 git clone https://github.com/stephschofield/mural-mcp.git
-cd mural-mcp && npm install && npm run build
+cd mural-mcp
+npm install
+npm run build
+```
 
-# 2. Credentials (from app.mural.co → avatar menu → "Create and manage apps")
-export MURAL_CLIENT_ID=your_client_id
-export MURAL_CLIENT_SECRET=your_client_secret
+Confirm `build/index.js` exists. On Windows, `npm run build` does not need
+`chmod`. If `prepare` already built during `npm install`, running `build`
+again is safe.
 
-# 3. Authorize — opens a browser, caches tokens at ~/.mural-mcp/tokens.json (0600)
+### 3. Create a Mural app (no approval wait)
+
+1. Sign in at [app.mural.co](https://app.mural.co).
+2. Avatar menu (top right) → **Create and manage apps** → **New app**.
+3. Set:
+
+   | Field | Value |
+   |---|---|
+   | App name | `mural-mcp` (any name is fine) |
+   | Redirect URL | `http://localhost:3000/callback` |
+
+   The redirect URL must match exactly. No trailing slash.
+
+4. Enable **only** these scopes:
+
+   ```
+   workspaces:read
+   rooms:read
+   murals:read
+   templates:read
+   users:read
+   identity:read
+   ```
+
+5. Save. Copy the **Client ID** and **Client secret**.
+
+The client secret is shown **once**. If you lose it, reset it on the app page
+and run `npm run auth` again.
+
+If **Create and manage apps** is missing, your workspace admin has disabled
+app creation. Ask them to create the app and give you the client ID and
+secret out of band. Do not commit those values.
+
+### 4. Put credentials in your environment
+
+Do not write them into any file in this repo.
+
+**macOS / Linux:**
+
+```bash
+export MURAL_CLIENT_ID="your_client_id"
+export MURAL_CLIENT_SECRET="your_client_secret"
+```
+
+Add the same two lines to your shell profile (`~/.bashrc`, `~/.zshrc`) if you
+want them to persist.
+
+**Windows PowerShell (current session):**
+
+```powershell
+$env:MURAL_CLIENT_ID = "your_client_id"
+$env:MURAL_CLIENT_SECRET = "your_client_secret"
+```
+
+**Windows PowerShell (persist for your user account):**
+
+```powershell
+[Environment]::SetEnvironmentVariable("MURAL_CLIENT_ID", "your_client_id", "User")
+[Environment]::SetEnvironmentVariable("MURAL_CLIENT_SECRET", "your_client_secret", "User")
+```
+
+Close and reopen the terminal after setting User environment variables.
+
+Optional: copy `.env.example` to `.env` for a runner that loads it
+(`node --env-file=.env`). `.env` is gitignored. The server does not read
+`.env` by itself.
+
+### 5. Authorize once
+
+From the repo root, in a shell where the two variables are set:
+
+```bash
 npm run auth
+```
 
-# 4. Register with Claude Code
-claude mcp add mural --scope user \
-  -e MURAL_CLIENT_ID="$MURAL_CLIENT_ID" \
-  -e MURAL_CLIENT_SECRET="$MURAL_CLIENT_SECRET" \
+A browser window opens. Approve the app. Tokens are cached at
+`~/.mural-mcp/tokens.json` with mode `0600`. This is local to your machine.
+
+If the browser does not open, the CLI prints a URL. Open it yourself. The
+local listener on port 3000 must be reachable as `localhost`.
+
+You should not need to run `auth` again unless you reset the secret or change
+scopes.
+
+### 6. Connect GitHub Copilot CLI
+
+Copilot CLI does **not** pass your shell environment into MCP servers except
+`PATH`. You must hand it the two variables.
+
+**macOS / Linux** (run from the repo root):
+
+```bash
+copilot mcp add mural \
+  --env MURAL_CLIENT_ID="$MURAL_CLIENT_ID" \
+  --env MURAL_CLIENT_SECRET="$MURAL_CLIENT_SECRET" \
   -- node "$(pwd)/build/index.js"
 ```
 
-Restart Claude Code, run `/mcp` to confirm, then ask: *"Check my Mural connection."*
+**Windows PowerShell** (run from the repo root):
 
-> When creating the Mural app, set the **Redirect URL** to exactly
-> `http://localhost:3000/callback` and enable these scopes:
-> `workspaces:read`, `rooms:read`, `murals:read`, `templates:read`,
-> `users:read`, `identity:read`.
->
-> The client secret is shown **once**.
+```powershell
+copilot mcp add mural `
+  --env MURAL_CLIENT_ID=$env:MURAL_CLIENT_ID `
+  --env MURAL_CLIENT_SECRET=$env:MURAL_CLIENT_SECRET `
+  -- node "$PWD\build\index.js"
+```
 
-Claude Desktop, WSL, headless hosts, and troubleshooting are covered in the
-**[Installation Guide](docs/INSTALLATION.md)**.
+Check:
+
+```bash
+copilot mcp list
+copilot mcp get mural
+```
+
+You should see a user server named `mural`. Start Copilot and ask:
+
+```
+Check my Mural connection
+```
+
+This repo also ships `.mcp.json`. If you start `copilot` from the repo root,
+that file is loaded automatically. Prefer `copilot mcp add` for use from any
+directory.
+
+### 7. Connect VS Code Copilot Chat
+
+1. `npm run build` so `build/index.js` exists.
+2. Open **this folder** in VS Code.
+3. Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) → **MCP: List Servers**.
+   You should see `mural` from `.vscode/mcp.json`.
+4. Start the server if prompted. Trust it.
+5. Open Copilot Chat. Switch to **Agent** mode (Ask mode cannot call MCP tools).
+6. Ask: `Check my Mural connection`.
+
+To use the same server from every workspace, Command Palette →
+**MCP: Open User Configuration** and add a server with an **absolute** path
+to `build/index.js`. Do not paste your client secret into that file if it is
+synced.
+
+VS Code inherits your user environment, so User-level `MURAL_CLIENT_ID` and
+`MURAL_CLIENT_SECRET` are visible to the server. Cached tokens in
+`~/.mural-mcp/tokens.json` are used either way.
+
+### 8. Confirm it works
+
+No Mural credentials needed for this one:
+
+```bash
+npm test
+```
+
+That builds, runs widget fixture tests, and proves the process answers MCP
+`initialize` and `tools/list`.
+
+With auth completed, in Copilot CLI or VS Code Agent chat:
+
+```
+Check my Mural connection
+List my Mural workspaces
+```
+
+`check_connection` should report your user, granted scopes, and
+`mode: "read-only"`.
+
+---
+
+## Use it from another project
+
+Your workshop repo does not need this source tree. Point Copilot at the
+built file with an absolute path.
+
+**Copilot CLI** (`.mcp.json` in the other repo):
+
+```json
+{
+  "mcpServers": {
+    "mural": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/mural-mcp/build/index.js"],
+      "tools": ["*"]
+    }
+  }
+}
+```
+
+**VS Code Copilot Chat** (`.vscode/mcp.json` in the other repo):
+
+```json
+{
+  "servers": {
+    "mural": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/mural-mcp/build/index.js"]
+    }
+  }
+}
+```
+
+On Windows, use forward slashes:
+`C:/Users/you/repos/mural-mcp/build/index.js`.
+
+Each person still runs `npm run auth` once on their own machine.
+
+More host detail: [docs/COPILOT.md](docs/COPILOT.md).
+Claude Code and Claude Desktop: [docs/INSTALLATION.md](docs/INSTALLATION.md).
+
+---
+
+## What to ask
+
+```
+List my Mural workspaces, then find the latest envisioning board
+and summarize sticky notes grouped by color.
+```
+
+```
+Read mural <id> with get_mural_structure. Report sticky notes,
+text notes, images, and stickers, and how they sit inside areas.
+```
+
+Typical chain: `list_workspaces` → `list_rooms` → `list_murals` →
+`get_mural_structure` or `get_mural_text` (set `groupByColor: true` when
+color is a category).
+
+Recipes: [docs/USAGE.md](docs/USAGE.md).
+
+---
 
 ## Tools
 
 | Tool | Purpose |
 |---|---|
 | `check_connection` | Verify auth; show user, scopes, rate-limit status |
-| `list_workspaces` | List your workspaces |
+| `list_workspaces` | List workspaces |
 | `list_rooms` | List rooms in a workspace |
 | `list_murals` | List murals in a room or workspace |
 | `get_mural` | Metadata for one mural |
-| **`get_mural_text`** | **Main tool** — all text in reading order, optional color grouping |
-| `get_mural_summary` | Widget counts by type + text sample |
+| **`get_mural_text`** | All text in reading order, optional color grouping |
+| **`get_mural_structure`** | Workshop capture: sticky notes, text, images, stickers, areas |
+| `get_mural_summary` | Widget counts by type plus a text sample |
 | `get_mural_widgets` | Raw widgets with geometry and style |
 | `search_murals` | Find murals by text query |
 | `search_actions` | Discover 24 more read-only API operations |
 | `execute_action` | Run a discovered action |
 
-Typical flow: `list_workspaces` → `list_rooms` → `list_murals` → `get_mural_text`
-
-**Why 11 tools and not 100.** Mural exposes roughly a hundred endpoints.
-Declaring each as its own tool would put a hundred schemas in the context window
-on *every* request, degrading tool selection and raising cost. Instead, the
-high-traffic paths get dedicated tools with typed schemas, and the remaining 24
-read operations — tags, voting results, timers, templates, folders,
-membership — live in a catalog reached via `search_actions` / `execute_action`.
-Those cost nothing until searched. Full rationale in
+Twelve dedicated tools cover the common path. The remaining read endpoints
+live in a catalog so every request is not paying for ~100 schemas. See
 [ARCHITECTURE.md](docs/ARCHITECTURE.md#tool-design-why-hybrid).
 
-## Design notes
+---
 
-**15-minute access tokens.** The dominant constraint. Tokens are cached on disk
-(mode `0600`) so a refresh survives restarts, refreshed 60 s before expiry, and
-retried once after an unexpected `401`.
+## Read-only by design
 
-**Rate limits.** Requests are serialized through a promise chain and spaced to
-~20/sec — deliberately under Mural's per-user cap. `429` responses honour
-`Retry-After`, capped at 30 s so a bad header cannot hang the client.
+This server cannot create, modify, or delete anything in Mural. Four layers:
 
-**Inconsistent envelopes.** Mural's `value` field arrives as an array, as
-`{widgets:[...]}`, or as a numeric-keyed object depending on the endpoint.
-`normalizeItems` handles all three — behavior carried over from the v1
-prototype, which found these the hard way against the live API.
+1. **Scopes.** OAuth requests `*:read` only. Mural rejects writes.
+2. **Client.** `MuralClient` exposes `get()` only. No post/put/patch/delete.
+3. **Catalog.** `execute_action` can only call GET paths.
+4. **Contract.** Every tool sets `readOnlyHint: true`.
 
-**Big boards.** Page walks stop at 20 pages (5 for search) and responses report
-`truncated: true` rather than silently returning partial data — the model can
-tell "that's everything" from "there's more."
+Details: [SECURITY.md](SECURITY.md#design-guarantees).
 
-**Reading order.** Extracted text is sorted top-to-bottom, left-to-right with a
-row tolerance, so a board's visual structure survives into the model's
-interpretation instead of arriving as a shuffled deck.
+---
 
 ## Documentation
 
 | Document | Contents |
 |---|---|
-| [Installation](docs/INSTALLATION.md) | Full setup, all clients, config reference, troubleshooting |
-| [Usage](docs/USAGE.md) | Recipes by role; working with large boards; prompting tips |
-| [API Reference](docs/API.md) | Every tool and action, parameters, return shapes, limits |
-| [Architecture](docs/ARCHITECTURE.md) | Module map, design decisions, how to extend |
-| [Mural API Alignment](docs/MURAL_API_ALIGNMENT.md) | What was verified against Mural's docs, and one place they diverge |
-| [Security](SECURITY.md) | Threat model, guarantees, credential handling, revocation |
-| [Contributing](CONTRIBUTING.md) | Development setup, PR guidance, style |
+| [Copilot](docs/COPILOT.md) | CLI and VS Code Copilot Chat |
+| [Installation](docs/INSTALLATION.md) | Claude hosts, WSL, troubleshooting |
+| [Usage](docs/USAGE.md) | Recipes by role |
+| [API Reference](docs/API.md) | Tools, parameters, return shapes |
+| [Architecture](docs/ARCHITECTURE.md) | Module map and design decisions |
+| [Mural API Alignment](docs/MURAL_API_ALIGNMENT.md) | What was checked against Mural's docs |
+| [Security](SECURITY.md) | Threat model, credentials, revocation |
+| [Contributing](CONTRIBUTING.md) | Development setup |
 
-## Project layout
-
-```
-src/
-├── config.ts     Endpoints, scopes, env loading
-├── auth.ts       Token cache, refresh, code exchange
-├── auth-cli.ts   `npm run auth` — localhost OAuth flow
-├── client.ts     GET-only HTTP: throttle, retry, pagination, normalization
-├── widgets.ts    Text extraction, type labelling, reading order
-├── actions.ts    Long-tail action catalog + search
-└── index.ts      MCP server and tool definitions
-
-legacy/           v1 prototype (March 2026), archived — see legacy/README.md
-```
+---
 
 ## Development
 
 ```bash
 npm run dev        # tsc --watch
 npm run typecheck  # no emit
-npm run build      # compile + chmod
+npm run build      # compile (chmod on Unix only)
+npm test           # build + widget fixtures + MCP handshake
 ```
 
-CI runs typecheck and build on Node 18/20/22, boots the server to verify it
-speaks MCP, and gates every push on a secret scan.
+CI typechecks and builds on Node 18/20/22, runs the MCP handshake, and scans
+every push with gitleaks.
+
+```
+src/
+├── config.ts     Endpoints, scopes, env loading
+├── auth.ts       Token cache, refresh, code exchange
+├── auth-cli.ts   `npm run auth` localhost OAuth flow
+├── client.ts     GET-only HTTP
+├── widgets.ts    Text and structure extraction
+├── actions.ts    Long-tail action catalog
+└── index.ts      MCP server and tool definitions
+
+legacy/           archived v1 prototype. Do not install from here.
+```
+
+---
 
 ## License
 

@@ -19,6 +19,7 @@ import { MuralClient, MuralApiError, normalizeItems } from "./client.js";
 import { loadTokens } from "./auth.js";
 import {
   extractTexts,
+  extractStructure,
   summarizeWidgets,
   inReadingOrder,
   type Widget,
@@ -35,14 +36,16 @@ const config = loadConfig(false);
 const client = new MuralClient(config);
 
 const server = new McpServer(
-  { name: "mural-mcp", version: "2.0.0" },
+  { name: "mural-mcp", version: "2.1.0" },
   {
     instructions:
       "Read-only access to Mural boards. Start with list_workspaces to get a " +
-      "workspace id, then list_rooms / list_murals to find a mural id, then " +
-      "get_mural_text to read its contents. For anything not covered by a " +
-      "dedicated tool, call search_actions with a plain-English intent and then " +
-      "execute_action. This server cannot create, modify, or delete anything.",
+      "workspace id, then list_rooms / list_murals to find a mural id. Use " +
+      "get_mural_structure for workshop capture (sticky notes, text, images, " +
+      "stickers, areas). Use get_mural_text to read text in reading order. For " +
+      "anything not covered by a dedicated tool, call search_actions with a " +
+      "plain-English intent and then execute_action. This server cannot create, " +
+      "modify, or delete anything.",
   },
 );
 
@@ -322,6 +325,40 @@ server.registerTool(
 );
 
 server.registerTool(
+  "get_mural_structure",
+  {
+    title: "Get mural workshop structure",
+    description:
+      "Capture a mural as workshop structure: areas/frameworks, sticky notes, " +
+      "other text notes, images, and stickers/icons, each in reading order. " +
+      "Use this for envisioning boards where images and stickers matter alongside " +
+      "stickies. Prefer get_mural_text when you only need the words.",
+    inputSchema: {
+      muralId: z.string().describe("Mural id from list_murals."),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+  handler(async ({ muralId }: { muralId: string }) => {
+    const { items, truncated } = await fetchWidgets(muralId);
+    const structure = extractStructure(items);
+    return {
+      muralId,
+      widgetsScanned: items.length,
+      truncated,
+      counts: {
+        areas: structure.areas.length,
+        stickyNotes: structure.stickyNotes.length,
+        notes: structure.notes.length,
+        images: structure.images.length,
+        stickers: structure.stickers.length,
+        other: structure.otherCount,
+      },
+      ...structure,
+    };
+  }),
+);
+
+server.registerTool(
   "get_mural_widgets",
   {
     title: "Get raw mural widgets",
@@ -482,7 +519,7 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stdout is the MCP channel — diagnostics must go to stderr.
-  console.error("mural-mcp v2.0.0 ready (read-only)");
+  console.error("mural-mcp v2.1.0 ready (read-only)");
 }
 
 main().catch((err: unknown) => {

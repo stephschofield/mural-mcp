@@ -23,7 +23,7 @@ ten minutes; most of it is waiting on the Mural app form.
 | **Node.js 18+** | `node --version`. Node 18 is the floor because the server uses the built-in `fetch`. |
 | **npm** | Ships with Node. |
 | **A Mural account** | Any plan. You need permission to create an app — on some enterprise workspaces this is restricted by an admin. |
-| **An MCP client** | Claude Code, Claude Desktop, or any MCP-compatible host. |
+| **An MCP client** | GitHub Copilot CLI, VS Code Copilot Chat, Claude Code, Claude Desktop, or any MCP-compatible host. |
 
 > **Enterprise note.** If your avatar menu has no **Create and manage apps**
 > entry, your workspace admin has disabled app creation. You will need them to
@@ -175,6 +175,25 @@ refreshes them automatically using the stored refresh token.
 
 ## Step 5 — Register with your MCP client
 
+### GitHub Copilot CLI and VS Code Copilot Chat
+
+This is the supported path for teams using Copilot. Full walkthrough, Windows
+notes, and how to wire the server into a different workshop repo:
+
+**[docs/COPILOT.md](COPILOT.md)**
+
+Short version (Copilot CLI, from the repo root after `npm run build`):
+
+```bash
+copilot mcp add mural \
+  --env MURAL_CLIENT_ID="$MURAL_CLIENT_ID" \
+  --env MURAL_CLIENT_SECRET="$MURAL_CLIENT_SECRET" \
+  -- node "$(pwd)/build/index.js"
+```
+
+This repository already contains `.mcp.json` (Copilot CLI / Agent Host) and
+`.vscode/mcp.json` (VS Code Copilot Chat).
+
 ### Claude Code
 
 ```bash
@@ -279,7 +298,8 @@ re-run `npm run auth` if the required scopes changed.
 ## Uninstalling
 
 ```bash
-claude mcp remove mural --scope user   # or remove the entry from your client config
+copilot mcp remove mural               # Copilot CLI user config
+# VS Code: MCP: List Servers → mural → Delete
 rm -rf ~/.mural-mcp                    # delete the cached tokens
 ```
 
@@ -314,7 +334,7 @@ ls -l ~/.mural-mcp/tokens.json
 [ -n "$MURAL_CLIENT_SECRET" ] && echo "client secret: set" || echo "client secret: MISSING"
 
 # Does the server start?
-node build/index.js   # expect: "mural-mcp v2.0.0 ready (read-only)" on stderr; Ctrl-C to exit
+node build/index.js   # expect: "mural-mcp v2.1.0 ready (read-only)" on stderr; Ctrl-C to exit
 ```
 
 > Never paste the output of `echo $MURAL_CLIENT_SECRET` into an issue, a PR, or

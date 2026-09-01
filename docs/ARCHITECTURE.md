@@ -20,8 +20,8 @@ cannot change it.
 
 ```
 ┌─────────────┐   MCP over stdio   ┌──────────────┐   HTTPS GET   ┌───────────┐
-│ Claude Code │ ◄────────────────► │  mural-mcp   │ ◄───────────► │ Mural API │
-│  / Desktop  │   JSON-RPC 2.0     │  (this repo) │   Bearer      │  public/v1│
+│ Copilot/Claude │ ◄────────────────► │  mural-mcp   │ ◄───────────► │ Mural API │
+│ CLI / VS Code │   JSON-RPC 2.0     │  (this repo) │   Bearer      │  public/v1│
 └─────────────┘                    └──────┬───────┘               └───────────┘
                                           │
                                           ▼
@@ -139,9 +139,9 @@ Mural exposes roughly a hundred endpoints. Two obvious designs both fail:
 
 This server does both, split by traffic:
 
-- **Ten dedicated tools** cover the high-traffic paths — navigation, board
-  contents, search. These carry rich descriptions and typed Zod schemas, so the
-  model uses them correctly without guessing.
+- **10 dedicated tools** cover the high-traffic paths (navigation, board
+  contents including workshop structure, search). These carry rich descriptions
+  and typed Zod schemas, so the model uses them correctly without guessing.
 - **`search_actions` + `execute_action`** reach the long tail. The model
   describes intent in plain English, gets back matching action IDs with their
   parameters, then executes one. The 24 catalog entries cost nothing until

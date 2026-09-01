@@ -67,7 +67,7 @@ These are enforced in code, not by convention:
 
 - Commit `.env`, `tokens.json`, or any file containing a client secret. The
   `.gitignore` blocks the common names, but it cannot catch a file you rename.
-- Paste your client secret into a Claude Code prompt, an issue, or a PR.
+- Paste your client secret into an AI assistant prompt, an issue, or a PR.
 - Store credentials in `claude_desktop_config.json` if that file is synced or
   backed up to a shared location — prefer environment variables.
 - Widen scopes beyond what you need.
